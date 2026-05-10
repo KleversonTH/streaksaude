@@ -19,20 +19,13 @@ export default function Perfil() {
       setUsuario(user)
 
       const { data: habitosData } = await supabase
-        .from('habits')
-        .select('*')
-        .eq('active', true)
-
+        .from('habits').select('*').eq('active', true)
       setHabitos(habitosData || [])
 
       if (habitosData?.length > 0) {
         const ids = habitosData.map(h => h.id)
         const { data: checkinsData } = await supabase
-          .from('checkins')
-          .select('*')
-          .in('habit_id', ids)
-          .eq('completed', true)
-
+          .from('checkins').select('*').in('habit_id', ids).eq('completed', true)
         setCheckins(checkinsData || [])
       }
     }
@@ -40,72 +33,100 @@ export default function Perfil() {
   }, [])
 
   const totalCheckins = checkins.length
-
   const melhorStreak = habitos.reduce((max, h) => {
     const s = calcularStreak(checkins, h.id)
     return s > max ? s : max
   }, 0)
-
   const hoje = new Date().toISOString().split('T')[0]
-  const habitosHoje = habitos.filter(h =>
-    checkins.some(c => c.habit_id === h.id && c.date === hoje)
-  ).length
-
   const diasAtivos = [...new Set(checkins.map(c => c.date))].length
 
-  return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="max-w-md mx-auto">
+  const statStyle = {
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '20px', padding: '20px',
+    textAlign: 'center'
+  }
 
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="text-gray-400 mb-6 flex items-center gap-1 hover:text-gray-600"
-        >
+  return (
+    <main style={{ minHeight: '100vh', padding: '32px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ width: '100%', maxWidth: '480px' }}>
+
+        <button onClick={() => router.push('/dashboard')} style={{
+          background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)',
+          cursor: 'pointer', fontSize: '14px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '4px'
+        }}>
           ← Voltar
         </button>
 
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Meu perfil</h1>
+        <h1 style={{ color: 'white', fontSize: '28px', fontWeight: '700', marginBottom: '24px' }}>
+          Meu perfil
+        </h1>
 
+        {/* Card do usuário */}
         {usuario && (
-          <div className="bg-white rounded-2xl shadow p-6 mb-4 flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center text-2xl">
+          <div style={{
+            background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '24px', padding: '24px', marginBottom: '16px',
+            display: 'flex', alignItems: 'center', gap: '16px'
+          }}>
+            <div style={{
+              width: '56px', height: '56px', borderRadius: '16px', flexShrink: 0,
+              background: 'linear-gradient(135deg, #10b981, #059669)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '24px', boxShadow: '0 4px 16px rgba(16,185,129,0.3)'
+            }}>
               🧑
             </div>
             <div>
-              <p className="font-bold text-gray-800">{usuario.user_metadata?.full_name || 'Usuário'}</p>
-              <p className="text-sm text-gray-500">{usuario.email}</p>
+              <p style={{ color: 'white', fontWeight: '700', fontSize: '16px', margin: '0 0 4px' }}>
+                {usuario.user_metadata?.full_name || 'Usuário'}
+              </p>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', margin: 0 }}>
+                {usuario.email}
+              </p>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-white rounded-2xl shadow p-4 text-center">
-            <p className="text-3xl font-bold text-green-600">{habitos.length}</p>
-            <p className="text-sm text-gray-500 mt-1">Hábitos ativos</p>
+        {/* Stats */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+          <div style={statStyle}>
+            <p style={{ color: '#10b981', fontSize: '32px', fontWeight: '700', margin: '0 0 4px' }}>{habitos.length}</p>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', margin: 0 }}>Hábitos ativos</p>
           </div>
-          <div className="bg-white rounded-2xl shadow p-4 text-center">
-            <p className="text-3xl font-bold text-orange-500">{melhorStreak}🔥</p>
-            <p className="text-sm text-gray-500 mt-1">Melhor streak</p>
+          <div style={statStyle}>
+            <p style={{ color: '#f97316', fontSize: '32px', fontWeight: '700', margin: '0 0 4px' }}>{melhorStreak}🔥</p>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', margin: 0 }}>Melhor streak</p>
           </div>
-          <div className="bg-white rounded-2xl shadow p-4 text-center">
-            <p className="text-3xl font-bold text-blue-500">{diasAtivos}</p>
-            <p className="text-sm text-gray-500 mt-1">Dias ativos</p>
+          <div style={statStyle}>
+            <p style={{ color: '#60a5fa', fontSize: '32px', fontWeight: '700', margin: '0 0 4px' }}>{diasAtivos}</p>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', margin: 0 }}>Dias ativos</p>
           </div>
-          <div className="bg-white rounded-2xl shadow p-4 text-center">
-            <p className="text-3xl font-bold text-purple-500">{totalCheckins}</p>
-            <p className="text-sm text-gray-500 mt-1">Check-ins totais</p>
+          <div style={statStyle}>
+            <p style={{ color: '#a78bfa', fontSize: '32px', fontWeight: '700', margin: '0 0 4px' }}>{totalCheckins}</p>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', margin: 0 }}>Check-ins totais</p>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow p-4">
-          <h2 className="font-bold text-gray-800 mb-3">Seus hábitos</h2>
-          {habitos.map(h => (
-            <div key={h.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">{h.icon}</span>
-                <span className="text-sm text-gray-700">{h.name}</span>
+        {/* Lista de hábitos */}
+        <div style={{
+          background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: '24px', padding: '24px'
+        }}>
+          <h2 style={{ color: 'white', fontWeight: '700', fontSize: '16px', margin: '0 0 16px' }}>Seus hábitos</h2>
+          {habitos.map((h, idx) => (
+            <div key={h.id} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '12px 0',
+              borderBottom: idx < habitos.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '20px' }}>{h.icon}</span>
+                <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '14px' }}>{h.name}</span>
               </div>
-              <span className="text-sm font-medium text-orange-500">
+              <span style={{ color: '#f97316', fontSize: '13px', fontWeight: '600' }}>
                 🔥 {calcularStreak(checkins, h.id)} dias
               </span>
             </div>

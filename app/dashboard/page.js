@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 import { calcularStreak } from '../../lib/streak'
-import { useCallback } from 'react'
 
 export default function Dashboard() {
   const supabase = createClient()
@@ -24,32 +23,19 @@ export default function Dashboard() {
       setUsuario(user)
 
       const { data: habitosData } = await supabase
-        .from('habits')
-        .select('*')
-        .eq('active', true)
-        .order('created_at')
-
+        .from('habits').select('*').eq('active', true).order('created_at')
       setHabitos(habitosData || [])
 
       if (habitosData?.length > 0) {
         const ids = habitosData.map(h => h.id)
-
         const { data: checkinsHoje } = await supabase
-          .from('checkins')
-          .select('*')
-          .in('habit_id', ids)
-          .eq('date', hoje)
-
+          .from('checkins').select('*').in('habit_id', ids).eq('date', hoje)
         const mapa = {}
         checkinsHoje?.forEach(c => { mapa[c.habit_id] = true })
         setCheckins(mapa)
 
         const { data: todosData } = await supabase
-          .from('checkins')
-          .select('*')
-          .in('habit_id', ids)
-          .eq('completed', true)
-
+          .from('checkins').select('*').in('habit_id', ids).eq('completed', true)
         setTodosCheckins(todosData || [])
       }
     }
@@ -57,28 +43,20 @@ export default function Dashboard() {
   }, [])
 
   async function toggleCheckin(habitoId) {
-  if (checkins[habitoId]) return
-
-  await supabase.from('checkins').insert({
-    habit_id: habitoId,
-    date: hoje,
-    completed: true
-  })
-
-  const novoCheckin = { habit_id: habitoId, date: hoje, completed: true }
-  setCheckins(prev => ({ ...prev, [habitoId]: true }))
-  setTodosCheckins(prev => [...prev, novoCheckin])
-  setCelebrando(habitoId)
-  setTimeout(() => setCelebrando(null), 1000)
-}
+    if (checkins[habitoId]) return
+    await supabase.from('checkins').insert({ habit_id: habitoId, date: hoje, completed: true })
+    const novoCheckin = { habit_id: habitoId, date: hoje, completed: true }
+    setCheckins(prev => ({ ...prev, [habitoId]: true }))
+    setTodosCheckins(prev => [...prev, novoCheckin])
+    setCelebrando(habitoId)
+    setTimeout(() => setCelebrando(null), 1000)
+  }
 
   async function deletarHabito(habitoId) {
     const confirmar = window.confirm('Deletar esse hábito? O histórico será perdido.')
     if (!confirmar) return
-
     await supabase.from('checkins').delete().eq('habit_id', habitoId)
     await supabase.from('habits').delete().eq('id', habitoId)
-
     setHabitos(prev => prev.filter(h => h.id !== habitoId))
     setTodosCheckins(prev => prev.filter(c => c.habit_id !== habitoId))
   }
@@ -86,113 +64,126 @@ export default function Dashboard() {
   const totalFeitos = Object.keys(checkins).length
   const totalHabitos = habitos.length
 
-  return (
-    <main className="min-h-screen bg-gray-50 px-4 py-8">
-      <div className="max-w-md mx-auto">
+  const card = (feito) => ({
+    display: 'flex', alignItems: 'center', gap: '16px', padding: '16px',
+    borderRadius: '20px', marginBottom: '12px', cursor: 'pointer',
+    border: 'none', width: '100%', textAlign: 'left', transition: 'all 0.2s',
+    background: feito ? 'rgba(16,185,129,0.85)' : 'rgba(255,255,255,0.08)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    borderTop: feito ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.1)',
+  })
 
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-green-600">StreakSaúde</h1>
-            <button
-              onClick={() => router.push('/historico')}
-              className="text-xs text-gray-400 hover:text-green-600 transition"
-            >
-              Ver histórico →
-            </button>
+  return (
+    <main style={{ minHeight: '100vh', padding: '32px 24px' }}>
+      <div style={{ maxWidth: '480px', margin: '0 auto' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '24px' }}>🔥</span>
+            <span style={{ fontSize: '20px', fontWeight: '700', color: 'white' }}>StreakSaúde</span>
           </div>
           {usuario && (
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => router.push('/perfil')}
-                className="text-sm text-gray-500 hover:text-green-600 transition"
-              >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button onClick={() => router.push('/perfil')}
+                style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: 'pointer' }}>
                 {usuario.email}
               </button>
-              <button
-                onClick={async () => {
-                  await supabase.auth.signOut()
-                  router.push('/login')
-                }}
-                className="text-sm text-red-400 hover:text-red-600 transition"
-              >
+              <button onClick={async () => { await supabase.auth.signOut(); router.push('/login') }}
+                style={{ fontSize: '13px', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer' }}>
                 Sair
               </button>
             </div>
           )}
         </div>
 
+        {/* Progresso do dia */}
         {totalHabitos > 0 && (
-          <div className="bg-white rounded-2xl shadow p-4 mb-6 flex items-center gap-4">
-            <div className="text-4xl">
-              {totalFeitos === totalHabitos ? '🔥' : '⭕'}
-            </div>
+          <div style={{
+            background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '24px', padding: '20px', marginBottom: '24px',
+            display: 'flex', alignItems: 'center', gap: '16px'
+          }}>
+            <span style={{ fontSize: '40px' }}>{totalFeitos === totalHabitos ? '🔥' : '⭕'}</span>
             <div>
-              <p className="font-bold text-gray-800">
-                {totalFeitos === totalHabitos
-                  ? 'Tudo feito hoje!'
-                  : `${totalFeitos} de ${totalHabitos} hábitos`}
+              <p style={{ color: 'white', fontWeight: '700', fontSize: '16px', margin: '0 0 4px' }}>
+                {totalFeitos === totalHabitos ? 'Tudo feito hoje!' : `${totalFeitos} de ${totalHabitos} hábitos`}
               </p>
-              <p className="text-sm text-gray-500">
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', margin: 0 }}>
                 {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
             </div>
+            <button onClick={() => router.push('/historico')}
+              style={{ marginLeft: 'auto', fontSize: '12px', color: '#10b981', background: 'none', border: 'none', cursor: 'pointer' }}>
+              Histórico →
+            </button>
           </div>
         )}
 
+        {/* Hábitos */}
         {habitos.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow p-6 text-center">
-            <p className="text-4xl mb-3">🔥</p>
-            <h2 className="text-xl font-bold text-gray-800 mb-1">Seus hábitos</h2>
-            <p className="text-gray-500 text-sm mb-6">Você ainda não tem hábitos cadastrados.</p>
-            <button
-              onClick={() => router.push('/novo-habito')}
-              className="bg-green-600 text-white px-6 py-2 rounded-full font-medium hover:bg-green-700 transition"
-            >
+          <div style={{
+            background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '24px', padding: '40px 24px', textAlign: 'center'
+          }}>
+            <p style={{ fontSize: '48px', marginBottom: '12px' }}>🔥</p>
+            <p style={{ color: 'white', fontWeight: '700', fontSize: '18px', marginBottom: '8px' }}>Seus hábitos</p>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', marginBottom: '24px' }}>Você ainda não tem hábitos cadastrados.</p>
+            <button onClick={() => router.push('/novo-habito')} style={{
+              background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white',
+              border: 'none', borderRadius: '99px', padding: '12px 28px',
+              fontWeight: '600', cursor: 'pointer', fontSize: '15px'
+            }}>
               + Adicionar hábito
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div>
             {habitos.map(habito => {
               const feito = checkins[habito.id]
               const streak = calcularStreak(todosCheckins, habito.id)
               return (
-                <div
-                  key={habito.id}
-                  className={`w-full flex items-center gap-4 p-4 rounded-2xl shadow transition ${
-                    feito ? 'bg-green-600 text-white' : 'bg-white text-gray-800'
-                  }`}
-                >
-                  <button
-                    onClick={() => toggleCheckin(habito.id)}
-                    className="flex items-center gap-4 flex-1 text-left"
-                  >
-                    <span className="text-3xl">{habito.icon}</span>
-                    <div className="flex-1">
-                      <p className="font-medium">{habito.name}</p>
+                <div key={habito.id} style={{ ...card(feito), justifyContent: 'space-between' }}>
+                  <button onClick={() => toggleCheckin(habito.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                    <span style={{ fontSize: '32px' }}>{habito.icon}</span>
+                    <div>
+                      <p style={{ color: 'white', fontWeight: '600', fontSize: '15px', margin: '0 0 2px' }}>{habito.name}</p>
                       {streak > 0 && (
-                        <p className={`text-sm ${feito ? 'text-green-100' : 'text-orange-500'}`}>
+                        <p style={{ color: feito ? 'rgba(255,255,255,0.7)' : '#f97316', fontSize: '12px', margin: 0 }}>
                           🔥 {streak} {streak === 1 ? 'dia' : 'dias'} seguidos
                         </p>
                       )}
                     </div>
-                    <span className={`text-2xl transition-transform duration-300 ${celebrando === habito.id ? 'scale-150' : 'scale-100'}`}>
+                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      fontSize: '24px',
+                      transition: 'transform 0.3s',
+                      transform: celebrando === habito.id ? 'scale(1.5)' : 'scale(1)',
+                      display: 'inline-block'
+                    }}>
                       {feito ? '✅' : '⬜'}
                     </span>
-                  </button>
-                  <button
-                    onClick={() => deletarHabito(habito.id)}
-                    className={`ml-2 text-xl ${feito ? 'text-green-200 hover:text-white' : 'text-gray-300 hover:text-red-400'} transition`}
-                  >
-                    🗑️
-                  </button>
+                    <button onClick={() => deletarHabito(habito.id)}
+                      style={{ fontSize: '18px', background: 'none', border: 'none', cursor: 'pointer', opacity: 0.5 }}>
+                      🗑️
+                    </button>
+                  </div>
                 </div>
               )
             })}
 
-            <button
-              onClick={() => router.push('/novo-habito')}
-              className="w-full border-2 border-dashed border-gray-200 text-gray-400 py-3 rounded-2xl font-medium hover:border-green-400 hover:text-green-500 transition mt-2"
+            <button onClick={() => router.push('/novo-habito')} style={{
+              width: '100%', padding: '16px', borderRadius: '20px', marginTop: '4px',
+              background: 'transparent', border: '2px dashed rgba(255,255,255,0.15)',
+              color: 'rgba(255,255,255,0.4)', fontSize: '15px', cursor: 'pointer', transition: 'all 0.2s'
+            }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#10b981'; e.currentTarget.style.color = '#10b981' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)' }}
             >
               + Adicionar hábito
             </button>
