@@ -68,6 +68,17 @@ export default function Dashboard() {
     setTodosCheckins(prev => [...prev, novoCheckin])
   }
 
+  async function deletarHabito(habitoId) {
+    const confirmar = window.confirm('Deletar esse hábito? O histórico será perdido.')
+    if (!confirmar) return
+
+    await supabase.from('checkins').delete().eq('habit_id', habitoId)
+    await supabase.from('habits').delete().eq('id', habitoId)
+
+    setHabitos(prev => prev.filter(h => h.id !== habitoId))
+    setTodosCheckins(prev => prev.filter(c => c.habit_id !== habitoId))
+  }
+
   const totalFeitos = Object.keys(checkins).length
   const totalHabitos = habitos.length
 
@@ -78,7 +89,18 @@ export default function Dashboard() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-green-600">StreakSaúde</h1>
           {usuario && (
-            <span className="text-sm text-gray-500">{usuario.email}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-500">{usuario.email}</span>
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut()
+                  router.push('/login')
+                }}
+                className="text-sm text-red-400 hover:text-red-600 transition"
+              >
+                Sair
+              </button>
+            </div>
           )}
         </div>
 
@@ -118,24 +140,34 @@ export default function Dashboard() {
               const feito = checkins[habito.id]
               const streak = calcularStreak(todosCheckins, habito.id)
               return (
-                <button
+                <div
                   key={habito.id}
-                  onClick={() => toggleCheckin(habito.id)}
                   className={`w-full flex items-center gap-4 p-4 rounded-2xl shadow transition ${
                     feito ? 'bg-green-600 text-white' : 'bg-white text-gray-800'
                   }`}
                 >
-                  <span className="text-3xl">{habito.icon}</span>
-                  <div className="flex-1 text-left">
-                    <p className="font-medium">{habito.name}</p>
-                    {streak > 0 && (
-                      <p className={`text-sm ${feito ? 'text-green-100' : 'text-orange-500'}`}>
-                        🔥 {streak} {streak === 1 ? 'dia' : 'dias'} seguidos
-                      </p>
-                    )}
-                  </div>
-                  <span className="text-2xl">{feito ? '✅' : '⬜'}</span>
-                </button>
+                  <button
+                    onClick={() => toggleCheckin(habito.id)}
+                    className="flex items-center gap-4 flex-1 text-left"
+                  >
+                    <span className="text-3xl">{habito.icon}</span>
+                    <div className="flex-1">
+                      <p className="font-medium">{habito.name}</p>
+                      {streak > 0 && (
+                        <p className={`text-sm ${feito ? 'text-green-100' : 'text-orange-500'}`}>
+                          🔥 {streak} {streak === 1 ? 'dia' : 'dias'} seguidos
+                        </p>
+                      )}
+                    </div>
+                    <span className="text-2xl">{feito ? '✅' : '⬜'}</span>
+                  </button>
+                  <button
+                    onClick={() => deletarHabito(habito.id)}
+                    className={`ml-2 text-xl ${feito ? 'text-green-200 hover:text-white' : 'text-gray-300 hover:text-red-400'} transition`}
+                  >
+                    🗑️
+                  </button>
+                </div>
               )
             })}
 
