@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 import { calcularStreak } from '../../lib/streak'
+import { useCallback } from 'react'
 
 export default function Dashboard() {
   const supabase = createClient()
@@ -12,6 +13,7 @@ export default function Dashboard() {
   const [habitos, setHabitos] = useState([])
   const [checkins, setCheckins] = useState({})
   const [todosCheckins, setTodosCheckins] = useState([])
+  const [celebrando, setCelebrando] = useState(null)
 
   const hoje = new Date().toISOString().split('T')[0]
 
@@ -55,18 +57,20 @@ export default function Dashboard() {
   }, [])
 
   async function toggleCheckin(habitoId) {
-    if (checkins[habitoId]) return
+  if (checkins[habitoId]) return
 
-    await supabase.from('checkins').insert({
-      habit_id: habitoId,
-      date: hoje,
-      completed: true
-    })
+  await supabase.from('checkins').insert({
+    habit_id: habitoId,
+    date: hoje,
+    completed: true
+  })
 
-    const novoCheckin = { habit_id: habitoId, date: hoje, completed: true }
-    setCheckins(prev => ({ ...prev, [habitoId]: true }))
-    setTodosCheckins(prev => [...prev, novoCheckin])
-  }
+  const novoCheckin = { habit_id: habitoId, date: hoje, completed: true }
+  setCheckins(prev => ({ ...prev, [habitoId]: true }))
+  setTodosCheckins(prev => [...prev, novoCheckin])
+  setCelebrando(habitoId)
+  setTimeout(() => setCelebrando(null), 1000)
+}
 
   async function deletarHabito(habitoId) {
     const confirmar = window.confirm('Deletar esse hábito? O histórico será perdido.')
@@ -87,10 +91,23 @@ export default function Dashboard() {
       <div className="max-w-md mx-auto">
 
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-green-600">StreakSaúde</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-green-600">StreakSaúde</h1>
+            <button
+              onClick={() => router.push('/historico')}
+              className="text-xs text-gray-400 hover:text-green-600 transition"
+            >
+              Ver histórico →
+            </button>
+          </div>
           {usuario && (
             <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-500">{usuario.email}</span>
+              <button
+                onClick={() => router.push('/perfil')}
+                className="text-sm text-gray-500 hover:text-green-600 transition"
+              >
+                {usuario.email}
+              </button>
               <button
                 onClick={async () => {
                   await supabase.auth.signOut()
@@ -159,7 +176,9 @@ export default function Dashboard() {
                         </p>
                       )}
                     </div>
-                    <span className="text-2xl">{feito ? '✅' : '⬜'}</span>
+                    <span className={`text-2xl transition-transform duration-300 ${celebrando === habito.id ? 'scale-150' : 'scale-100'}`}>
+                      {feito ? '✅' : '⬜'}
+                    </span>
                   </button>
                   <button
                     onClick={() => deletarHabito(habito.id)}
