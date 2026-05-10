@@ -27,12 +27,17 @@ export default function Historico() {
   const router = useRouter()
   const [habitos, setHabitos] = useState([])
   const [checkins, setCheckins] = useState([])
+  const [premium, setPremium] = useState(false)
   const dias = ultimosDias(7)
 
   useEffect(() => {
     async function carregar() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
+
+      const { data: perfil } = await supabase
+        .from('profiles').select('premium').eq('id', user.id).single()
+      setPremium(perfil?.premium || false)
 
       const { data: habitosData } = await supabase
         .from('habits').select('*').eq('active', true).order('created_at')
@@ -52,6 +57,15 @@ export default function Historico() {
     return checkins.some(c => c.habit_id === habitoId && c.date === data)
   }
 
+  // Calcula % de conclusão por dia (para o gráfico)
+  function taxaDia(data) {
+    if (habitos.length === 0) return 0
+    const feitos = habitos.filter(h => feito(h.id, data)).length
+    return Math.round((feitos / habitos.length) * 100)
+  }
+
+  const melhorDia = dias.reduce((melhor, dia) => taxaDia(dia) > taxaDia(melhor) ? dia : melhor, dias[0])
+
   return (
     <main style={{ minHeight: '100vh', padding: '32px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ width: '100%', maxWidth: '480px' }}>
@@ -67,12 +81,76 @@ export default function Historico() {
           Últimos 7 dias
         </h1>
 
+        {/* Gráfico semanal — só premium */}
+        {premium ? (
+          <div style={{
+            background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '24px', padding: '20px', marginBottom: '20px'
+          }}>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', fontWeight: '600', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              📊 Análise semanal
+            </p>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '80px' }}>
+              {dias.map(dia => {
+                const taxa = taxaDia(dia)
+                const isMelhor = dia === melhorDia && taxa > 0
+                return (
+                  <div key={dia} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '10px', color: isMelhor ? '#10b981' : 'rgba(255,255,255,0.4)', fontWeight: isMelhor ? '700' : '400' }}>
+                      {taxa}%
+                    </span>
+                    <div style={{
+                      width: '100%', borderRadius: '6px',
+                      height: `${Math.max(taxa * 0.5, 4)}px`,
+                      background: isMelhor
+                        ? 'linear-gradient(180deg, #10b981, #059669)'
+                        : taxa > 0 ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.08)',
+                      transition: 'height 0.3s ease'
+                    }} />
+                    <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>
+                      {nomeDia(dia)}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+            {habitos.length > 0 && (
+              <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', margin: '12px 0 0', textAlign: 'center' }}>
+                🏆 Melhor dia: {new Date(melhorDia + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric' })} ({taxaDia(melhorDia)}%)
+              </p>
+            )}
+          </div>
+        ) : (
+          /* Banner de upgrade */
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(245,158,11,0.15), rgba(217,119,6,0.08))',
+            border: '1px solid rgba(245,158,11,0.25)', borderRadius: '20px',
+            padding: '20px', marginBottom: '20px', textAlign: 'center'
+          }}>
+            <p style={{ fontSize: '28px', margin: '0 0 8px' }}>📊</p>
+            <p style={{ color: '#f59e0b', fontWeight: '700', fontSize: '15px', margin: '0 0 4px' }}>
+              Análise semanal
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', margin: '0 0 16px' }}>
+              Veja seu gráfico de progresso semanal com o plano Premium.
+            </p>
+            <button onClick={() => router.push('/perfil')} style={{
+              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              color: 'white', border: 'none', borderRadius: '99px',
+              padding: '10px 24px', fontSize: '14px', fontWeight: '700', cursor: 'pointer'
+            }}>
+              Upgrade para Premium →
+            </button>
+          </div>
+        )}
+
+        {/* Tabela de hábitos */}
         <div style={{
           background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.12)',
           borderRadius: '24px', overflow: 'hidden'
         }}>
-
           {/* Header dos dias */}
           <div style={{ display: 'grid', gridTemplateColumns: '48px repeat(7, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ padding: '12px' }} />

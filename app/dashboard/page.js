@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 import { calcularStreak } from '../../lib/streak'
+import { verificarEsalvarBadges, buscarBadges, BADGES } from '../../lib/badges'
+
+const LIMITE_FREE = 3
 
 export default function Dashboard() {
   const supabase = createClient()
@@ -13,6 +16,9 @@ export default function Dashboard() {
   const [checkins, setCheckins] = useState({})
   const [todosCheckins, setTodosCheckins] = useState([])
   const [celebrando, setCelebrando] = useState(null)
+  const [badges, setBadges] = useState([])
+  const [badgeNovo, setBadgeNovo] = useState(null)
+  const [premium, setPremium] = useState(false)
 
   const hoje = new Date().toISOString().split('T')[0]
 
@@ -21,6 +27,13 @@ export default function Dashboard() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
       setUsuario(user)
+
+      const { data: perfil } = await supabase
+        .from('profiles')
+        .select('premium')
+        .eq('id', user.id)
+        .single()
+      setPremium(perfil?.premium || false)
 
       const { data: habitosData } = await supabase
         .from('habits').select('*').eq('active', true).order('created_at')
@@ -38,6 +51,9 @@ export default function Dashboard() {
           .from('checkins').select('*').in('habit_id', ids).eq('completed', true)
         setTodosCheckins(todosData || [])
       }
+
+      const badgesData = await buscarBadges(supabase, user.id)
+      setBadges(badgesData)
     }
     carregar()
   }, [])
@@ -46,10 +62,26 @@ export default function Dashboard() {
     if (checkins[habitoId]) return
     await supabase.from('checkins').insert({ habit_id: habitoId, date: hoje, completed: true })
     const novoCheckin = { habit_id: habitoId, date: hoje, completed: true }
+    const novosCheckins = [...todosCheckins, novoCheckin]
     setCheckins(prev => ({ ...prev, [habitoId]: true }))
-    setTodosCheckins(prev => [...prev, novoCheckin])
+    setTodosCheckins(novosCheckins)
     setCelebrando(habitoId)
     setTimeout(() => setCelebrando(null), 1000)
+
+    const streak = calcularStreak(novosCheckins, habitoId)
+    const badgesAntes = badges.map(b => b.tipo)
+    await verificarEsalvarBadges(supabase, usuario.id, habitoId, streak)
+    const badgesDepois = await buscarBadges(supabase, usuario.id)
+    setBadges(badgesDepois)
+
+    const novo = badgesDepois.find(b =>
+      b.habit_id === habitoId && !badgesAntes.includes(b.tipo)
+    )
+    if (novo) {
+      const info = BADGES.find(b => b.tipo === novo.tipo)
+      setBadgeNovo(info)
+      setTimeout(() => setBadgeNovo(null), 3000)
+    }
   }
 
   async function deletarHabito(habitoId) {
@@ -61,6 +93,11 @@ export default function Dashboard() {
     setTodosCheckins(prev => prev.filter(c => c.habit_id !== habitoId))
   }
 
+  function podeCriarHabito() {
+    if (premium) return true
+    return habitos.length < LIMITE_FREE
+  }
+
   const totalFeitos = Object.keys(checkins).length
   const totalHabitos = habitos.length
 
@@ -69,8 +106,7 @@ export default function Dashboard() {
     borderRadius: '20px', marginBottom: '12px', cursor: 'pointer',
     border: 'none', width: '100%', textAlign: 'left', transition: 'all 0.2s',
     background: feito ? 'rgba(16,185,129,0.85)' : 'rgba(255,255,255,0.08)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
+    backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
     borderTop: feito ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(255,255,255,0.1)',
   })
 
@@ -78,11 +114,38 @@ export default function Dashboard() {
     <main style={{ minHeight: '100vh', padding: '32px 24px' }}>
       <div style={{ maxWidth: '480px', margin: '0 auto' }}>
 
+        {/* Notificação de badge novo */}
+        {badgeNovo && (
+          <div style={{
+            position: 'fixed', top: '24px', left: '50%', transform: 'translateX(-50%)',
+            background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+            color: 'white', borderRadius: '99px', padding: '12px 24px',
+            fontWeight: '700', fontSize: '15px', zIndex: 1000,
+            boxShadow: '0 8px 32px rgba(245,158,11,0.4)',
+            animation: 'slideDown 0.4s ease'
+          }}>
+            {badgeNovo.emoji} Conquista desbloqueada: {badgeNovo.nome}!
+          </div>
+        )}
+
+        <style>{`
+          @keyframes slideDown {
+            from { opacity: 0; transform: translateX(-50%) translateY(-20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+          }
+        `}</style>
+
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '24px' }}>🔥</span>
             <span style={{ fontSize: '20px', fontWeight: '700', color: 'white' }}>StreakSaúde</span>
+            {premium && (
+              <span style={{
+                fontSize: '11px', fontWeight: '700', background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                color: 'white', borderRadius: '99px', padding: '2px 8px', marginLeft: '4px'
+              }}>PRO</span>
+            )}
           </div>
           {usuario && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -97,6 +160,32 @@ export default function Dashboard() {
             </div>
           )}
         </div>
+
+        {/* Banner premium se free e tem 3+ hábitos */}
+        {!premium && habitos.length >= LIMITE_FREE && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(245,158,11,0.2), rgba(217,119,6,0.1))',
+            border: '1px solid rgba(245,158,11,0.3)', borderRadius: '20px',
+            padding: '16px 20px', marginBottom: '16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+          }}>
+            <div>
+              <p style={{ color: '#f59e0b', fontWeight: '700', fontSize: '14px', margin: '0 0 2px' }}>
+                🔒 Limite atingido
+              </p>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', margin: 0 }}>
+                Plano free: até {LIMITE_FREE} hábitos
+              </p>
+            </div>
+            <button onClick={() => router.push('/perfil')} style={{
+              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              color: 'white', border: 'none', borderRadius: '99px',
+              padding: '8px 16px', fontSize: '13px', fontWeight: '700', cursor: 'pointer'
+            }}>
+              Upgrade →
+            </button>
+          </div>
+        )}
 
         {/* Progresso do dia */}
         {totalHabitos > 0 && (
@@ -119,6 +208,34 @@ export default function Dashboard() {
               style={{ marginLeft: 'auto', fontSize: '12px', color: '#10b981', background: 'none', border: 'none', cursor: 'pointer' }}>
               Histórico →
             </button>
+          </div>
+        )}
+
+        {/* Badges conquistados */}
+        {badges.length > 0 && (
+          <div style={{
+            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '20px', padding: '16px 20px', marginBottom: '20px'
+          }}>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', fontWeight: '600', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Conquistas
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {BADGES.map(b => {
+                const conquistado = badges.find(bg => bg.tipo === b.tipo)
+                return (
+                  <div key={b.tipo} style={{
+                    padding: '6px 12px', borderRadius: '99px', fontSize: '13px',
+                    background: conquistado ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)',
+                    color: conquistado ? '#f59e0b' : 'rgba(255,255,255,0.2)',
+                    border: conquistado ? '1px solid rgba(245,158,11,0.3)' : '1px solid rgba(255,255,255,0.08)',
+                    fontWeight: conquistado ? '600' : '400'
+                  }}>
+                    {b.emoji} {b.nome}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
@@ -145,6 +262,7 @@ export default function Dashboard() {
             {habitos.map(habito => {
               const feito = checkins[habito.id]
               const streak = calcularStreak(todosCheckins, habito.id)
+              const habitoBadges = badges.filter(b => b.habit_id === habito.id)
               return (
                 <div key={habito.id} style={{ ...card(feito), justifyContent: 'space-between' }}>
                   <button onClick={() => toggleCheckin(habito.id)}
@@ -153,16 +271,20 @@ export default function Dashboard() {
                     <div>
                       <p style={{ color: 'white', fontWeight: '600', fontSize: '15px', margin: '0 0 2px' }}>{habito.name}</p>
                       {streak > 0 && (
-                        <p style={{ color: feito ? 'rgba(255,255,255,0.7)' : '#f97316', fontSize: '12px', margin: 0 }}>
+                        <p style={{ color: feito ? 'rgba(255,255,255,0.7)' : '#f97316', fontSize: '12px', margin: '0 0 2px' }}>
                           🔥 {streak} {streak === 1 ? 'dia' : 'dias'} seguidos
+                        </p>
+                      )}
+                      {habitoBadges.length > 0 && (
+                        <p style={{ fontSize: '12px', margin: 0, color: '#f59e0b' }}>
+                          {habitoBadges.map(b => BADGES.find(bd => bd.tipo === b.tipo)?.emoji).join(' ')}
                         </p>
                       )}
                     </div>
                   </button>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{
-                      fontSize: '24px',
-                      transition: 'transform 0.3s',
+                      fontSize: '24px', transition: 'transform 0.3s',
                       transform: celebrando === habito.id ? 'scale(1.5)' : 'scale(1)',
                       display: 'inline-block'
                     }}>
@@ -177,16 +299,18 @@ export default function Dashboard() {
               )
             })}
 
-            <button onClick={() => router.push('/novo-habito')} style={{
-              width: '100%', padding: '16px', borderRadius: '20px', marginTop: '4px',
-              background: 'transparent', border: '2px dashed rgba(255,255,255,0.15)',
-              color: 'rgba(255,255,255,0.4)', fontSize: '15px', cursor: 'pointer', transition: 'all 0.2s'
-            }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#10b981'; e.currentTarget.style.color = '#10b981' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)' }}
-            >
-              + Adicionar hábito
-            </button>
+            {podeCriarHabito() && (
+              <button onClick={() => router.push('/novo-habito')} style={{
+                width: '100%', padding: '16px', borderRadius: '20px', marginTop: '4px',
+                background: 'transparent', border: '2px dashed rgba(255,255,255,0.15)',
+                color: 'rgba(255,255,255,0.4)', fontSize: '15px', cursor: 'pointer', transition: 'all 0.2s'
+              }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#10b981'; e.currentTarget.style.color = '#10b981' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)' }}
+              >
+                + Adicionar hábito
+              </button>
+            )}
           </div>
         )}
 
