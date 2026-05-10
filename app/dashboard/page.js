@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
+import { calcularStreak } from '../../lib/streak'
 
 export default function Dashboard() {
   const supabase = createClient()
@@ -10,6 +11,7 @@ export default function Dashboard() {
   const [usuario, setUsuario] = useState(null)
   const [habitos, setHabitos] = useState([])
   const [checkins, setCheckins] = useState({})
+  const [todosCheckins, setTodosCheckins] = useState([])
 
   const hoje = new Date().toISOString().split('T')[0]
 
@@ -29,15 +31,24 @@ export default function Dashboard() {
 
       if (habitosData?.length > 0) {
         const ids = habitosData.map(h => h.id)
-        const { data: checkinsData } = await supabase
+
+        const { data: checkinsHoje } = await supabase
           .from('checkins')
           .select('*')
           .in('habit_id', ids)
           .eq('date', hoje)
 
         const mapa = {}
-        checkinsData?.forEach(c => { mapa[c.habit_id] = true })
+        checkinsHoje?.forEach(c => { mapa[c.habit_id] = true })
         setCheckins(mapa)
+
+        const { data: todosData } = await supabase
+          .from('checkins')
+          .select('*')
+          .in('habit_id', ids)
+          .eq('completed', true)
+
+        setTodosCheckins(todosData || [])
       }
     }
     carregar()
@@ -52,7 +63,9 @@ export default function Dashboard() {
       completed: true
     })
 
+    const novoCheckin = { habit_id: habitoId, date: hoje, completed: true }
     setCheckins(prev => ({ ...prev, [habitoId]: true }))
+    setTodosCheckins(prev => [...prev, novoCheckin])
   }
 
   const totalFeitos = Object.keys(checkins).length
@@ -103,6 +116,7 @@ export default function Dashboard() {
           <div className="space-y-3">
             {habitos.map(habito => {
               const feito = checkins[habito.id]
+              const streak = calcularStreak(todosCheckins, habito.id)
               return (
                 <button
                   key={habito.id}
@@ -112,7 +126,14 @@ export default function Dashboard() {
                   }`}
                 >
                   <span className="text-3xl">{habito.icon}</span>
-                  <span className="font-medium flex-1 text-left">{habito.name}</span>
+                  <div className="flex-1 text-left">
+                    <p className="font-medium">{habito.name}</p>
+                    {streak > 0 && (
+                      <p className={`text-sm ${feito ? 'text-green-100' : 'text-orange-500'}`}>
+                        🔥 {streak} {streak === 1 ? 'dia' : 'dias'} seguidos
+                      </p>
+                    )}
+                  </div>
                   <span className="text-2xl">{feito ? '✅' : '⬜'}</span>
                 </button>
               )
