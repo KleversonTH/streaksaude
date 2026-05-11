@@ -21,11 +21,28 @@ export async function POST(req) {
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object
-    const userId = session.metadata.userId
+    const userId = session.metadata?.userId
+    if (userId) {
+      await supabase.from('profiles').upsert({ id: userId, premium: true })
+    }
+  }
 
-    await supabase
-      .from('profiles')
-      .upsert({ id: userId, premium: true })
+  if (event.type === 'invoice.payment_succeeded' || event.type === 'invoice_payment.paid') {
+    const invoice = event.data.object
+    const customerId = invoice.customer
+
+    const customers = await stripe.customers.list({ email: invoice.customer_email, limit: 1 })
+    if (customers.data.length > 0) {
+      const sessions = await stripe.checkout.sessions.list({
+        customer: customerId, limit: 5
+      })
+      for (const session of sessions.data) {
+        if (session.metadata?.userId) {
+          await supabase.from('profiles').upsert({ id: session.metadata.userId, premium: true })
+          break
+        }
+      }
+    }
   }
 
   return Response.json({ received: true })
