@@ -124,9 +124,13 @@ export default function Perfil() {
             </div>
             <button
               onClick={async () => {
-                // Simula ativação premium (substituir por Stripe futuramente)
-                await supabase.from('profiles').upsert({ id: usuario.id, premium: true })
-                setPremium(true)
+                const res = await fetch('/api/checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID }),
+                })
+                const data = await res.json()
+                if (data.url) window.location.href = data.url
               }}
               style={{
                 background: 'linear-gradient(135deg, #f59e0b, #d97706)',
