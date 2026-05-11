@@ -127,11 +127,15 @@ export default function Perfil() {
                 const res = await fetch('/api/checkout', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID }),
+                    body: JSON.stringify({
+                    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
+                    userId: usuario.id,
+                    userEmail: usuario.email,
+                  }),
                 })
                 const data = await res.json()
                 if (data.url) window.location.href = data.url
-              }}
+                }}
               style={{
                 background: 'linear-gradient(135deg, #f59e0b, #d97706)',
                 color: 'white', border: 'none', borderRadius: '99px',
