@@ -53,6 +53,7 @@ export default function Dashboard() {
     })
     console.log('resposta subscribe:', res.status)
     setNotificacaoAtiva(true)
+    console.log('notificacaoAtiva setada para true')
   }
   const hoje = new Date().toISOString().split('T')[0]
 
