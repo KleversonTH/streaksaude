@@ -49,6 +49,23 @@ export default function Dashboard() {
     })
     setNotificacaoAtiva(true)
   }
+
+  function compartilharStreak() {
+  const melhorStreak = habitos.reduce((max, h) => {
+    const s = calcularStreak(todosCheckins, h.id)
+    return s > max ? s : max
+  }, 0)
+
+  const texto = `🔥 Estou há ${melhorStreak} dias seguidos mantendo meus hábitos no StreakSaúde! Que tal começar o seu? 💪`
+  const url = 'https://streaksaude.vercel.app'
+
+  if (navigator.share) {
+    navigator.share({ title: 'StreakSaúde', text: texto, url })
+  } else {
+    navigator.clipboard.writeText(`${texto}\n${url}`)
+    alert('Link copiado!')
+  }
+}
   const hoje = new Date().toISOString().split('T')[0]
 
   useEffect(() => {
@@ -243,6 +260,18 @@ export default function Dashboard() {
               Histórico →
             </button>
           </div>
+        )}
+
+        {/* Compartilhar streak */}
+        {totalHabitos > 0 && (
+          <button onClick={compartilharStreak} style={{
+            width: '100%', padding: '14px', borderRadius: '20px', marginBottom: '16px',
+            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+            color: 'rgba(255,255,255,0.6)', fontSize: '14px', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+          }}>
+            📤 Compartilhar meu streak
+          </button>
         )}
 
         {/* Botão notificações */}
