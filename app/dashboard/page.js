@@ -246,34 +246,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Badges conquistados */}
-        {badges.length > 0 && (
-          <div style={{
-            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: '20px', padding: '16px 20px', marginBottom: '20px'
-          }}>
-            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', fontWeight: '600', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Conquistas
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {BADGES.map(b => {
-                const conquistado = badges.find(bg => bg.tipo === b.tipo)
-                return (
-                  <div key={b.tipo} style={{
-                    padding: '6px 12px', borderRadius: '99px', fontSize: '13px',
-                    background: conquistado ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)',
-                    color: conquistado ? '#f59e0b' : 'rgba(255,255,255,0.2)',
-                    border: conquistado ? '1px solid rgba(245,158,11,0.3)' : '1px solid rgba(255,255,255,0.08)',
-                    fontWeight: conquistado ? '600' : '400'
-                  }}>
-                    {b.emoji} {b.nome}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
         {/* Botão notificações */}
         {true ? (
           <div style={{
@@ -318,6 +290,34 @@ export default function Dashboard() {
             <p style={{ color: '#10b981', fontWeight: '600', fontSize: '14px', margin: 0 }}>
               Lembrete ativo às {horario}
             </p>
+          </div>
+        )}
+
+        {/* Badges conquistados */}
+        {badges.length > 0 && (
+          <div style={{
+            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '20px', padding: '16px 20px', marginBottom: '20px'
+          }}>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px', fontWeight: '600', margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Conquistas
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {BADGES.map(b => {
+                const conquistado = badges.find(bg => bg.tipo === b.tipo)
+                return (
+                  <div key={b.tipo} style={{
+                    padding: '6px 12px', borderRadius: '99px', fontSize: '13px',
+                    background: conquistado ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)',
+                    color: conquistado ? '#f59e0b' : 'rgba(255,255,255,0.2)',
+                    border: conquistado ? '1px solid rgba(245,158,11,0.3)' : '1px solid rgba(255,255,255,0.08)',
+                    fontWeight: conquistado ? '600' : '400'
+                  }}>
+                    {b.emoji} {b.nome}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
