@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '../../lib/supabase'
 import { calcularStreak } from '../../lib/streak'
 import { verificarEsalvarBadges, buscarBadges, BADGES } from '../../lib/badges'
-import confetti from 'canvas-confetti'
+const confetti = typeof window !== 'undefined' ? require('canvas-confetti') : null
 
 const LIMITE_FREE = 3
 
@@ -90,8 +90,8 @@ export default function Dashboard() {
     setCelebrando(habitoId)
     setTimeout(() => setCelebrando(null), 1000)
     const totalFeitosAgora = Object.keys({ ...checkins, [habitoId]: true }).length
-    if (totalFeitosAgora === totalHabitos) {
-      confetti({
+    if (totalFeitosAgora === totalHabitos && confetti) {
+      confetti.default({
         particleCount: 150,
         spread: 80,
         origin: { y: 0.6 },
