@@ -19,7 +19,31 @@ export default function Dashboard() {
   const [badges, setBadges] = useState([])
   const [badgeNovo, setBadgeNovo] = useState(null)
   const [premium, setPremium] = useState(false)
+  const [notificacaoAtiva, setNotificacaoAtiva] = useState(false)
 
+  async function ativarNotificacoes() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      alert('Seu navegador não suporta notificações push.')
+      return
+    }
+
+    const permission = await Notification.requestPermission()
+    if (permission !== 'granted') return
+
+    const registration = await navigator.serviceWorker.ready
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    })
+
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription, userId: usuario.id }),
+    })
+
+    setNotificacaoAtiva(true)
+  }
   const hoje = new Date().toISOString().split('T')[0]
 
   useEffect(() => {
@@ -233,6 +257,31 @@ export default function Dashboard() {
                 )
               })}
             </div>
+          </div>
+        )}
+
+        {/* Botão notificações */}
+        {!notificacaoAtiva && (
+          <div style={{
+            background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '20px', padding: '16px 20px', marginBottom: '16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+          }}>
+            <div>
+              <p style={{ color: 'white', fontWeight: '600', fontSize: '14px', margin: '0 0 2px' }}>
+                🔔 Lembretes diários
+              </p>
+              <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px', margin: 0 }}>
+                Receba um aviso todo dia para não quebrar o streak
+              </p>
+            </div>
+            <button onClick={ativarNotificacoes} style={{
+              background: 'rgba(16,185,129,0.2)', color: '#10b981',
+              border: '1px solid rgba(16,185,129,0.3)', borderRadius: '99px',
+              padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer'
+            }}>
+              Ativar
+            </button>
           </div>
         )}
 
