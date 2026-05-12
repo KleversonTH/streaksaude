@@ -252,7 +252,7 @@ export default function Dashboard() {
         )}
 
         {/* Botão notificações */}
-        {true ? (
+        {!notificacaoAtiva ? (
           <div style={{
             background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
             borderRadius: '20px', padding: '16px 20px', marginBottom: '16px',
