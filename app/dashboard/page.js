@@ -31,6 +31,7 @@ export default function Dashboard() {
     }
 
     const permission = await Notification.requestPermission()
+    console.log('permissão:', permission)
     if (permission !== 'granted') return
 
     const registration = await navigator.serviceWorker.ready
