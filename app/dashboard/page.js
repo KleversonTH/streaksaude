@@ -51,7 +51,7 @@ export default function Dashboard() {
         horario: horarioEscolhido
       }),
     })
-
+    console.log('resposta subscribe:', res.status)
     setNotificacaoAtiva(true)
   }
   const hoje = new Date().toISOString().split('T')[0]
