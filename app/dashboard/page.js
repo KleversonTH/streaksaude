@@ -35,10 +35,12 @@ export default function Dashboard() {
     if (permission !== 'granted') return
 
     const registration = await navigator.serviceWorker.ready
+    console.log('service worker ready:', registration)
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
     })
+    console.log('subscription:', subscription)
 
     await fetch('/api/push/subscribe', {
       method: 'POST',
