@@ -24,6 +24,7 @@ export default function Dashboard() {
   const [horario, setHorario] = useState('09:00')
 
   async function ativarNotificacoes(horarioEscolhido) {
+    console.log('ativarNotificacoes chamada', horarioEscolhido)
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       alert('Seu navegador não suporta notificações push.')
       return
