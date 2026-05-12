@@ -14,9 +14,22 @@ webpush.setVapidDetails(
 
 export async function POST(req) {
   try {
+    const agora = new Date()
+    const horarioAtual = agora.toLocaleTimeString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    })
+
     const { data: subscriptions } = await supabase
       .from('push_subscriptions')
       .select('*')
+      .eq('horario', horarioAtual)
+
+    if (!subscriptions || subscriptions.length === 0) {
+      return Response.json({ sent: 0 })
+    }
 
     const payload = JSON.stringify({
       title: '🔥 StreakSaúde',

@@ -7,11 +7,12 @@ const supabase = createClient(
 
 export async function POST(req) {
   try {
-    const { subscription, userId } = await req.json()
+    const { subscription, userId, horario } = await req.json()
 
     await supabase.from('push_subscriptions').upsert({
       user_id: userId,
       subscription,
+      horario: horario || '09:00',
     }, { onConflict: 'user_id' })
 
     return Response.json({ success: true })

@@ -21,8 +21,9 @@ export default function Dashboard() {
   const [badgeNovo, setBadgeNovo] = useState(null)
   const [premium, setPremium] = useState(false)
   const [notificacaoAtiva, setNotificacaoAtiva] = useState(false)
+  const [horario, setHorario] = useState('09:00')
 
-  async function ativarNotificacoes() {
+  async function ativarNotificacoes(horarioEscolhido) {
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       alert('Seu navegador não suporta notificações push.')
       return
@@ -40,7 +41,11 @@ export default function Dashboard() {
     await fetch('/api/push/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subscription, userId: usuario.id }),
+      body: JSON.stringify({
+        subscription,
+        userId: usuario.id,
+        horario: horarioEscolhido
+      }),
     })
 
     setNotificacaoAtiva(true)
@@ -270,7 +275,7 @@ export default function Dashboard() {
         )}
 
         {/* Botão notificações */}
-        {!notificacaoAtiva && (
+        {!notificacaoAtiva ? (
           <div style={{
             background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
             borderRadius: '20px', padding: '16px 20px', marginBottom: '16px',
@@ -284,13 +289,35 @@ export default function Dashboard() {
                 Receba um aviso todo dia para não quebrar o streak
               </p>
             </div>
-            <button onClick={ativarNotificacoes} style={{
-              background: 'rgba(16,185,129,0.2)', color: '#10b981',
-              border: '1px solid rgba(16,185,129,0.3)', borderRadius: '99px',
-              padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer'
-            }}>
-              Ativar
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="time"
+                value={horario}
+                onChange={e => setHorario(e.target.value)}
+                style={{
+                  background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: '8px', padding: '6px 10px', color: 'white', fontSize: '13px'
+                }}
+              />
+              <button onClick={() => ativarNotificacoes(horario)} style={{
+                background: 'rgba(16,185,129,0.2)', color: '#10b981',
+                border: '1px solid rgba(16,185,129,0.3)', borderRadius: '99px',
+                padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer'
+              }}>
+                Ativar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div style={{
+            background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)',
+            borderRadius: '20px', padding: '16px 20px', marginBottom: '16px',
+            display: 'flex', alignItems: 'center', gap: '12px'
+          }}>
+            <span style={{ fontSize: '20px' }}>🔔</span>
+            <p style={{ color: '#10b981', fontWeight: '600', fontSize: '14px', margin: 0 }}>
+              Lembrete ativo às {horario}
+            </p>
           </div>
         )}
 
