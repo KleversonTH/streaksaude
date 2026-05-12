@@ -29,10 +29,7 @@ export default function Dashboard() {
       setUsuario(user)
 
       const { data: perfil } = await supabase
-        .from('profiles')
-        .select('premium')
-        .eq('id', user.id)
-        .single()
+        .from('profiles').select('premium').eq('id', user.id).maybeSingle()
       setPremium(perfil?.premium || false)
 
       const { data: habitosData } = await supabase

@@ -36,8 +36,8 @@ export default function Historico() {
       if (!user) { router.push('/login'); return }
 
       const { data: perfil } = await supabase
-        .from('profiles').select('premium').eq('id', user.id).single()
-      setPremium(perfil?.premium || false)
+        .from('profiles').select('premium').eq('id', user.id).maybeSingle()
+        setPremium(perfil?.premium || false)
 
       const { data: habitosData } = await supabase
         .from('habits').select('*').eq('active', true).order('created_at')
