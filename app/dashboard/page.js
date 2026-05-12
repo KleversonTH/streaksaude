@@ -24,25 +24,21 @@ export default function Dashboard() {
   const [horario, setHorario] = useState('09:00')
 
   async function ativarNotificacoes(horarioEscolhido) {
-    console.log('ativarNotificacoes chamada', horarioEscolhido)
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       alert('Seu navegador não suporta notificações push.')
       return
     }
 
     const permission = await Notification.requestPermission()
-    console.log('permissão:', permission)
     if (permission !== 'granted') return
 
     const registration = await navigator.serviceWorker.ready
-    console.log('service worker ready:', registration)
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
     })
-    console.log('subscription:', subscription)
 
-    const res = await fetch('/api/push/subscribe', {
+    await fetch('/api/push/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -51,9 +47,7 @@ export default function Dashboard() {
         horario: horarioEscolhido
       }),
     })
-    console.log('resposta subscribe:', res.status)
     setNotificacaoAtiva(true)
-    console.log('notificacaoAtiva setada para true')
   }
   const hoje = new Date().toISOString().split('T')[0]
 
