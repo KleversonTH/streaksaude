@@ -66,7 +66,7 @@ export default function Dashboard() {
     alert('Link copiado!')
   }
 }
-  const hoje = new Date().toISOString().split('T')[0]
+  const hoje = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
 
   useEffect(() => {
     async function carregar() {
