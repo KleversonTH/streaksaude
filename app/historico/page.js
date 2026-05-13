@@ -9,7 +9,7 @@ function ultimosDias(n) {
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date()
     d.setDate(d.getDate() - i)
-    dias.push(d.toISOString().split('T')[0])
+    dias.push(d.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }))
   }
   return dias
 }
