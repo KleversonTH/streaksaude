@@ -97,6 +97,16 @@ export default function Dashboard() {
 
       const badgesData = await buscarBadges(supabase, user.id)
       setBadges(badgesData)
+      const { data: pushSub } = await supabase
+        .from('push_subscriptions')
+        .select('horario')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (pushSub) {
+        setNotificacaoAtiva(true)
+        setHorario(pushSub.horario || '09:00')
+      }
     }
     carregar()
   }, [])
